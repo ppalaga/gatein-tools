@@ -30,6 +30,11 @@ rsync="rsync"
 chrome="google-chrome"
 console="konsole"
 
+# other defaults
+scratchDir=~/scratch
+srcRoot=~/git
+project="gatein-portal"
+
 # Java opts
 JAVA_OPTS="-Xms64m -Xmx512m -XX:MaxPermSize=256m -Djava.net.preferIPv4Stack=true -Dorg.jboss.resolver.warning=true -Dsun.rmi.dgc.client.gcInterval=3600000 -Dsun.rmi.dgc.server.gcInterval=3600000"
 JAVA_OPTS="$JAVA_OPTS -Djboss.modules.system.pkgs=$JBOSS_MODULES_SYSTEM_PKGS -Djava.awt.headless=true"
@@ -84,9 +89,6 @@ while [ "$1" != "" ]; do
     esac
 done
 
-srcRoot=~/git
-project="gatein-portal"
-
 
 cd "${srcRoot}/${project}"
 branch="$(git rev-parse --abbrev-ref HEAD)"
@@ -95,7 +97,6 @@ branch="$(git rev-parse --abbrev-ref HEAD)"
 #autoPortOffset=$(echo "${branch}" | md5sum | gawk '{print $1}' | base64 -d | hexdump  -d -n 1 | head -n 1  | gawk '{print $2}')
 
 
-scratchDir=~/scratch
 buildDir="${scratchDir}/${project}-${branch}/build"
 wildFlyInstallDir="${scratchDir}/${project}-${branch}/wildFly"
 chromeProfileDir="${scratchDir}/${project}-${branch}/chrome"
@@ -184,6 +185,7 @@ function act_on_pattern() {
         fi
     done
 }
+
 function on_server_start() {
     local chromePids="$(ps -o pid,args -e | grep "[c]hrome.*user-data-dir=$chromeProfileDir" | sed 's/^ *\([0-9]*\).*/\1/')"
     local attemptCount="0"
@@ -222,7 +224,7 @@ function free_port() {
     if [ "${pid}" != "" ]
     then
         kill ${pid} > /dev/null 2>&1
-        echo -n "Waiting for PID ${pid} to free port : $1"
+        echo -n "Waiting for PID ${pid} to free port $1"
         while [[ ( -d /proc/${pid} ) && ( -z `grep zombie /proc/${pid}/status` ) ]]; do
             echo -n "."
             sleep 0.2
