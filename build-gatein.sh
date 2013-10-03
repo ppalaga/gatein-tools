@@ -85,6 +85,12 @@ while [ "$1" != "" ]; do
             urlPath="$1"
             shift
             ;;
+        -deployments ) shift
+            # A file containing script that is invoked befor starting the AS
+            # you can place commands to copy WARs and EARs to deployment folders there.
+            deployments="$1"
+            shift
+            ;;
         * ) shift
     esac
 done
@@ -189,7 +195,7 @@ function act_on_pattern() {
 function on_server_start() {
     local chromePids="$(ps -o pid,args -e | grep "[c]hrome.*user-data-dir=$chromeProfileDir" | sed 's/^ *\([0-9]*\).*/\1/')"
     local attemptCount="0"
-    echo -n "Trying to kill chrome with --user-data-dir=${chromeProfileDir}: "
+    echo -n "Killing chrome with --user-data-dir=${chromeProfileDir}: "
     while [[ -n "$chromePids" && "${attemptCount}" -lt 25 ]]
     do
         kill -9 $chromePids
@@ -267,6 +273,11 @@ then
 
     cp -R -t "$wildFlyInstallDir" "$wildFlyTarget/jboss/"*
 
+fi
+
+if [ -f "${deployments}" ]
+then
+    . "${deployments}"
 fi
 
 wildFlyStarted="false"
