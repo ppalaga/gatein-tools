@@ -20,7 +20,7 @@ mavenTestsSkip="-Dmaven.test.skip"
 runTomcat="false"
 serversDir="/opt"
 wildFlyVersion="7.1.1.Final"
-tomcatVersion="7.0.41"
+tomcatVersion="7.0.42"
 urlPath="/portal/classic"
 
 # command defaults
