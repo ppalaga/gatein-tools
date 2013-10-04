@@ -7,6 +7,34 @@
 #  - running WildFly and Tomcat in parallel
 #  - give auditive feedback when long running tasks fail or finish
 #  - starting a clean browser session in the right instant
+#
+# Typical usage:
+#  - Build gatein quickly without tests, start WildFly/JBoss AS and open browser:
+#
+#      build-gatein.sh
+#
+#  - Build gatein with tests (takes more than 20min), start WildFly/JBoss AS and open browser:
+#
+#      build-gatein.sh -runTests
+#
+#  - Build gatein with tests (takes more than 20min), start WildFly/JBoss AS, start Tomcat
+#    in parallel and open browser:
+#
+#      build-gatein.sh -runTests -runTomcat
+#
+#
+# Prerequisistes (i.a.):
+#  - mvn
+#  - WildFly/JBoss AS, the version named in ${wildFlyVersion}, unpacked in ${serversDir}
+#    (/opt by default)
+#  - Optionaly, when running with -runTomcat, Tomcat, the version named in ${tomcatVersion},
+#    unpacked in ${serversDir} (/opt by default)
+#
+# Compatibility:
+#  - Developed and tested on Fedora with KDE
+#  - Should also work on other *nix OSes
+#  - OSX support is underway, patches are welcome
+
 
 set -e
 set -x
@@ -25,12 +53,31 @@ urlPath="/portal/classic"
 
 # command defaults
 mvn="mvn"
-espeak="espeak"
-rsync="rsync"
 chrome="google-chrome"
-console="konsole"
+
+# some command autodetection
+if hash espeak 2>/dev/null; then
+    espeak="espeak"
+elif hash speak 2>/dev/null; then
+    espeak="speak"
+else
+    espeak="echo"
+fi
+
+# terminal emulator
+if hash konsole 2>/dev/null; then
+    console="konsole -e /bin/bash -c"
+elif hash gnome-terminal 2>/dev/null; then
+    console="gnome-terminal -e /bin/bash -c"
+elif hash xterm 2>/dev/null; then
+    console="xterm -e /bin/bash -c"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    console="osx_terminal"
+fi
 
 # other defaults
+# scratchDir is where we build and run the portal. We always overwrite if necessary, but we never
+# clean up old build directories. You need to do it manually from time to time
 scratchDir=~/scratch
 srcRoot=~/git
 project="gatein-portal"
@@ -86,8 +133,8 @@ while [ "$1" != "" ]; do
             shift
             ;;
         -deployments ) shift
-            # A file containing script that is invoked befor starting the AS
-            # you can place commands to copy WARs and EARs to deployment folders there.
+            # A file containing script that is invoked before starting the AS
+            # you can place commands to copy WARs and EARs to AS deployment folders there.
             deployments="$1"
             shift
             ;;
@@ -124,7 +171,18 @@ tomcatTarget="${buildDir}/${project}/packaging/tomcat/tomcat${tomcatMajorVersion
 tomcatPortOffset="0"
 #tomcatPortOffsetOpt="-Djboss.socket.binding.port-offset=${tomcatPortOffset}"
 tomcatHttpPort=$((8080 + $tomcatPortOffset))
+asBuildOpt=""
+if [ "$runTomcat" == "true" ]
+then
+    asBuildOpt="-Dtomcat${tomcatMajorVersion}.name=apache-tomcat-${tomcatVersion}"
+else
+    asBuildOpt="-Dgatein.dev=jbossas${wildFlyVersionArr[0]}${wildFlyVersionArr[1]}${wildFlyVersionArr[2]}"
+fi
 
+if [ "$espeak" == "echo" ]
+then
+    echo "You may want to install espeak or similar program for auditive feed back."
+fi
 
 chromeUrls="http://127.0.0.1:${wildFlyHttpPort}${urlPath}"
 if [ "$runTomcat" == "true" ]
@@ -144,14 +202,11 @@ export JAVA_OPTS
 function die() { "${espeak}" "$@" ; exit 1; }
 
 mvnClean=""
-rsyncDelete=""
 if [ "$clean" == "true" ]
 then
     mvnClean="clean"
-    rsyncDelete="--delete"
 else
     mvnClean=""
-    rsyncDelete=""
 fi
 
 
@@ -159,11 +214,11 @@ if [ "$skipBuild" == "false" ]
 then
 
     # copy sources
-    if [ ! -d "$buildDir" ]
-    then
-        mkdir -p "$buildDir"
-    fi
-    ${rsync} -a $rsyncDelete --exclude=.git "${srcRoot}/${project}" "$buildDir"
+    rm -Rf "$buildDir"
+    mkdir -p "$buildDir"
+    cd "${srcRoot}"
+    # we use tar to copy because cp does not have any option to exclude a directory from copying
+    tar cf - --exclude=.git "${project}" | (cd "$buildDir" && tar xf - )
 
     # build
     cd "$buildDir/$project"
@@ -174,7 +229,7 @@ then
     cd component
     "$mvn" install ${mvnSettingsOpt} ${skipTests} || die "Component build failed"
     cd ..
-    "$mvn" install ${mvnSettingsOpt} -Dservers.dir=$serversDir ${mavenTestsSkip} || die "GateIn build failed"
+    "$mvn" install ${mvnSettingsOpt} -Dservers.dir=$serversDir ${asBuildOpt} ${mavenTestsSkip} || die "GateIn build failed"
 
 fi
 
@@ -239,6 +294,10 @@ function free_port() {
     fi
 }
 
+function osx_terminal() {
+    osascript -e 'tell application "Terminal" to do script "'"$1"'"'
+}
+
 function run_tomcat() {
     free_port "${tomcatHttpPort}"
     if [ "$skipReinstall" == "false" ]
@@ -253,7 +312,7 @@ function run_tomcat() {
 
     fi
     # We have not taught tomcat to speak yet :)
-    ${console} -e /bin/bash -c "cd ${tomcatInstallDir}; bin/gatein.sh run"
+    ${console} "cd ${tomcatInstallDir}; bin/gatein.sh run"
 }
 
 set +x
