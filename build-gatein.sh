@@ -51,29 +51,10 @@ wildFlyVersion="7.1.1.Final"
 tomcatVersion="7.0.42"
 urlPath="/portal/classic"
 
-# command defaults
-mvn="mvn"
-chrome="google-chrome"
+# import utils.sh
+ . "$(dirname "$0")/utils.sh"
 
-# some command autodetection
-if hash espeak 2>/dev/null; then
-    espeak="espeak"
-elif hash speak 2>/dev/null; then
-    espeak="speak"
-else
-    espeak="echo"
-fi
-
-# terminal emulator
-if hash konsole 2>/dev/null; then
-    console="konsole -e /bin/bash -c"
-elif hash gnome-terminal 2>/dev/null; then
-    console="gnome-terminal -e /bin/bash -c"
-elif hash xterm 2>/dev/null; then
-    console="xterm -e /bin/bash -c"
-elif [[ "$OSTYPE" == "darwin"* ]]; then
-    console="osx_terminal"
-fi
+auto_detect_commands
 
 # other defaults
 # scratchDir is where we build and run the portal. We always overwrite if necessary, but we never
@@ -88,6 +69,8 @@ JAVA_OPTS="$JAVA_OPTS -Djboss.modules.system.pkgs=$JBOSS_MODULES_SYSTEM_PKGS -Dj
 JAVA_OPTS="$JAVA_OPTS -Djboss.server.default.config=standalone.xml"
 JAVA_OPTS="$JAVA_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000"
 JAVA_OPTS="$JAVA_OPTS -Dexo.product.developing=true"
+
+
 
 # eval the configuration file if it exists
 configPath=~/.build-gatein.conf
@@ -199,8 +182,6 @@ fi
 export JAVA_OPTS
 
 
-function die() { "${espeak}" "$@" ; exit 1; }
-
 mvnClean=""
 if [ "$clean" == "true" ]
 then
@@ -234,38 +215,8 @@ then
 fi
 
 
-function act_on_pattern() {
-    regex="$1"
-    action="$2"
-    while IFS= read line
-    do
-        echo "$line"
-        if [[ "$line" =~ $regex ]]
-        then
-          eval "$action"
-        fi
-    done
-}
-
 function on_server_start() {
-    local chromePids="$(ps -o pid,args -e | grep "[c]hrome.*user-data-dir=$chromeProfileDir" | sed 's/^ *\([0-9]*\).*/\1/')"
-    local attemptCount="0"
-    echo -n "Killing chrome with --user-data-dir=${chromeProfileDir}: "
-    while [[ -n "$chromePids" && "${attemptCount}" -lt 25 ]]
-    do
-        kill -9 $chromePids
-        sleep 0.2
-        echo -n "."
-        attemptCount=$((1 + $attemptCount))
-        chromePids="$(ps -o pid,args -e | grep "[c]hrome.*user-data-dir=$chromeProfileDir" | sed 's/^ *\([0-9]*\).*/\1/')"
-    done
-    echo
-    rm -Rf "$chromeProfileDir"
-    mkdir -p "$chromeProfileDir"
-    touch "$chromeProfileDir/First Run"
-    # Well it would be cleaner to start two isolated chrome instances for WildFly and Tomcat
-    # but one browser for both shoudl work in most cases as well
-    ${chrome} --no-default-browser-check "--user-data-dir=${chromeProfileDir}" ${chromeUrls} &> /dev/null &
+    open_clean_chrome_session "${chromeProfileDir}" ${chromeUrls}
     ${espeak} "GateIn build finished"
     wildFlyStarted="true"
 }
@@ -280,23 +231,6 @@ function handle_warn() {
     fi
 }
 
-function free_port() {
-    local pid=$(netstat -tulpen | grep ":$1 " |awk '{print $9}' | cut -d'/' -f 1)
-    if [ "${pid}" != "" ]
-    then
-        kill ${pid} > /dev/null 2>&1
-        echo -n "Waiting for PID ${pid} to free port $1"
-        while [[ ( -d /proc/${pid} ) && ( -z `grep zombie /proc/${pid}/status` ) ]]; do
-            echo -n "."
-            sleep 0.2
-        done
-        echo ""
-    fi
-}
-
-function osx_terminal() {
-    osascript -e 'tell application "Terminal" to do script "'"$1"'"'
-}
 
 function run_tomcat() {
     free_port "${tomcatHttpPort}"
