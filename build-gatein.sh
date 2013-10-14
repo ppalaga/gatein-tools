@@ -218,13 +218,12 @@ fi
 function on_server_start() {
     open_clean_chrome_session "${chromeProfileDir}" ${chromeUrls}
     ${espeak} "GateIn build finished"
-    wildFlyStarted="true"
 }
 
 function handle_warn() {
     line="$1"
     trimmedLine=$(echo "$line" | sed 's/^[0-9:., ]*//')
-    if [ "$wildFlyStarted" == "true" ]
+    if [ -f "$chromeProfileDir/First Run" ]
     then
         # Yes, we want this to be very annoying ;)
         ${espeak} "$trimmedLine"
@@ -273,7 +272,8 @@ then
     . "${deployments}"
 fi
 
-wildFlyStarted="false"
+rm -f "$chromeProfileDir/First Run"
+
 cd "$wildFlyInstallDir/bin"
 ./standalone.sh -b 0.0.0.0 $wildFlyPortOffsetOpt \
     | act_on_pattern " started in " "on_server_start" \
