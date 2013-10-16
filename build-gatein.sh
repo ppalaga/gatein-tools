@@ -222,11 +222,11 @@ function on_server_start() {
 
 function handle_warn() {
     line="$1"
-    trimmedLine=$(echo "$line" | sed 's/^[0-9:., ]*//')
+    trimmedLine=$(echo "$line" | sed 's/^[0-9:., ]*WARN *\[[^]]*\] *([^)]*) *//')
     if [ -f "$chromeProfileDir/First Run" ]
     then
         # Yes, we want this to be very annoying ;)
-        ${espeak} "$trimmedLine"
+        ${espeak} "Warning $trimmedLine"
     fi
 }
 

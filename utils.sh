@@ -7,7 +7,9 @@ function auto_detect_commands() {
     chrome="google-chrome"
 
     # some command autodetection
-    if hash espeak 2>/dev/null; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        espeak="say"
+    elif hash espeak 2>/dev/null; then
         espeak="espeak"
     elif hash speak 2>/dev/null; then
         espeak="speak"
