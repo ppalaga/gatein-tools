@@ -225,8 +225,12 @@ function handle_warn() {
     trimmedLine=$(echo "$line" | sed 's/^[0-9:., ]*WARN *\[[^]]*\] *([^)]*) *//')
     if [ -f "$chromeProfileDir/First Run" ]
     then
-        # Yes, we want this to be very annoying ;)
-        ${espeak} "Warning $trimmedLine"
+        if [ "${lastWarning}" != "${trimmedLine}" ]
+        then
+            # Yes, we want this to be very annoying ;)
+            lastWarning="${trimmedLine}"
+            ${espeak} "Warning ${trimmedLine}"
+        fi
     fi
 }
 
