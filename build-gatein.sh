@@ -223,14 +223,18 @@ function on_server_start() {
 function handle_warn() {
     line="$1"
     trimmedLine=$(echo "$line" | sed 's/^[0-9:., ]*WARN *\[[^]]*\] *([^)]*) *//')
-    if [ -f "$chromeProfileDir/First Run" ]
+    # Say each warning only once
+    # and ignore a couple of known warnings
+    if [[ "${lastWarning}" != "${trimmedLine}" \
+        && ! "${trimmedLine}" =~ "Clustering not supported" \
+        && ! "${trimmedLine}" =~ "using a private module (\"org.apache.cxf:main\")" \
+        && ! "${trimmedLine}" =~ "Unable to determine H2 database version, certain features may not work" \
+        && ! "${trimmedLine}" =~ "Repository repository is OFFLINE" \
+    ]]
     then
-        if [ "${lastWarning}" != "${trimmedLine}" ]
-        then
-            # Yes, we want this to be very annoying ;)
-            lastWarning="${trimmedLine}"
-            ${espeak} "Warning ${trimmedLine}"
-        fi
+        # Yes, we want this to be very annoying ;)
+        lastWarning="${trimmedLine}"
+        ${espeak} "Warning ${trimmedLine}"
     fi
 }
 
