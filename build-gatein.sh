@@ -284,7 +284,7 @@ rm -f "$chromeProfileDir/First Run"
 
 cd "$wildFlyInstallDir/bin"
 ./standalone.sh -b 0.0.0.0 $wildFlyPortOffsetOpt \
-    | act_on_pattern " started in " "on_server_start" \
+    | act_on_pattern "JBAS015874" "on_server_start" \
     | act_on_pattern "ERROR" "${espeak} Error" \
     | act_on_pattern "WARN" 'handle_warn "$line"'
 
