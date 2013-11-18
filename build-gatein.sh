@@ -111,6 +111,10 @@ while [ "$1" != "" ]; do
             serversDir="$1"
             shift
             ;;
+        -srcRoot ) shift
+            srcRoot="$1"
+            shift
+            ;;
         -urlPath ) shift
             urlPath="$1"
             shift
@@ -121,8 +125,8 @@ while [ "$1" != "" ]; do
             deployments="$1"
             shift
             ;;
-        -srcRoot ) shift
-            srcRoot="$1"
+        -initRootPassword ) shift
+            initRootPassword="$1"
             shift
             ;;
         * ) shift
@@ -267,15 +271,19 @@ then
 fi
 
 free_port "${wildFlyHttpPort}"
-if [ "$skipReinstall" == "false" ]
+if [ "${skipReinstall}" == "false" ]
 then
-    rm -Rf "$wildFlyInstallDir"
-    if [ ! -d "$wildFlyInstallDir" ]
+    rm -Rf "${wildFlyInstallDir}"
+    if [ ! -d "${wildFlyInstallDir}" ]
     then
-        mkdir -p "$wildFlyInstallDir"
+        mkdir -p "${wildFlyInstallDir}"
     fi
 
-    cp -R -t "$wildFlyInstallDir" "$wildFlyTarget/jboss/"*
+    cp -R -t "${wildFlyInstallDir}" "$wildFlyTarget/jboss/"*
+    if [[ -x "${wildFlyInstallDir}/bin/portal-setup.sh" && "${initRootPassword}" != "" ]]
+    then
+        "${wildFlyInstallDir}/bin/portal-setup.sh" -p "${initRootPassword}"
+    fi
 
 fi
 
@@ -286,7 +294,7 @@ fi
 
 rm -f "$chromeProfileDir/First Run"
 
-cd "$wildFlyInstallDir/bin"
+cd "${wildFlyInstallDir}/bin"
 ./standalone.sh -b 0.0.0.0 $wildFlyPortOffsetOpt \
     | act_on_pattern "JBAS015874" "on_server_start" \
     | act_on_pattern "ERROR" "${espeak} Error" \
