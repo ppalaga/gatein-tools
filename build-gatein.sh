@@ -121,6 +121,10 @@ while [ "$1" != "" ]; do
             deployments="$1"
             shift
             ;;
+        -srcRoot ) shift
+            srcRoot="$1"
+            shift
+            ;;
         * ) shift
     esac
 done
