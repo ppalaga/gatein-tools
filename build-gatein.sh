@@ -50,6 +50,7 @@ serversDir="/opt"
 wildFlyVersion="7.1.1.Final"
 tomcatVersion="7.0.42"
 urlPath="/portal/classic"
+productName="GateIn"
 
 # import utils.sh
  . "$(dirname "$0")/utils.sh"
@@ -218,14 +219,14 @@ then
     cd component
     "$mvn" install ${mvnSettingsOpt} ${skipTests} || die "Component build failed"
     cd ..
-    "$mvn" install ${mvnSettingsOpt} -Dservers.dir=$serversDir ${asBuildOpt} ${mavenTestsSkip} || die "GateIn build failed"
+    "$mvn" install ${mvnSettingsOpt} -Dservers.dir=$serversDir ${asBuildOpt} ${mavenTestsSkip} || die "${productName} build failed"
 
 fi
 
 
 function on_server_start() {
     open_clean_chrome_session "${chromeProfileDir}" ${chromeUrls}
-    ${espeak} "GateIn build finished"
+    ${espeak} "${productName} build finished"
 }
 
 function handle_warn() {
@@ -248,7 +249,9 @@ function handle_warn() {
 
 
 function run_tomcat() {
+    set +x
     free_port "${tomcatHttpPort}"
+    set -x
     if [ "$skipReinstall" == "false" ]
     then
         rm -Rf "$tomcatInstallDir"
@@ -264,13 +267,15 @@ function run_tomcat() {
     ${console} "cd ${tomcatInstallDir}; bin/gatein.sh run"
 }
 
-set +x
 if [ "$runTomcat" == "true" ]
 then
     run_tomcat
 fi
 
+set +x
 free_port "${wildFlyHttpPort}"
+set -x
+
 if [ "${skipReinstall}" == "false" ]
 then
     rm -Rf "${wildFlyInstallDir}"
@@ -294,6 +299,7 @@ fi
 
 rm -f "$chromeProfileDir/First Run"
 
+set +x
 cd "${wildFlyInstallDir}/bin"
 ./standalone.sh -b 0.0.0.0 $wildFlyPortOffsetOpt \
     | act_on_pattern "JBAS015874" "on_server_start" \
